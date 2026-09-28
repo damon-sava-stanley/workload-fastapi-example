@@ -1,0 +1,26 @@
+workloadId: 6abaa289984d8ba07a233204 # managed by the CLI
+name: fastapi-sample
+importance: low # low | moderate | high | critical
+artifact:
+  name: fastapi-sample-artifact
+  type: service
+  spec:
+    containerGroups:
+      - name: default
+        containers:
+          - name: primary
+            primary: true
+            port: 8080 # must be 1024 or above
+            imageBuildConfig: # built from this repository's Dockerfile
+              dockerfile:
+                source: provided
+            readinessProbe:
+              path: /healthz
+              port: 8080
+runtime:
+  containerGroups:
+    - name: default # matches the artifact group
+      replicaCount: 1
+      containers:
+        - name: primary
+          resourceAllocation: {cpu: 0.5, memory: 512MB}
