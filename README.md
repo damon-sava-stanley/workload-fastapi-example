@@ -54,6 +54,30 @@ header would have it hijacked by the edge as a (invalid) DataRobot API key.
 No local Docker or container registry needed — the image is built on
 DataRobot's build infrastructure from the synced source.
 
+## Runtime parameters
+
+| Variable          | Kind   | Purpose                                          |
+|-------------------|--------|--------------------------------------------------|
+| `APP_GREETING`    | plain  | Returned by `GET /`                              |
+| `MAX_ECHO_TIMES`  | plain  | Upper bound on `times` for `POST /echo`          |
+| `SERVICE_API_KEY` | secret | Required in `X-Service-Key` header for `GET /secure` |
+
+Locally: `cp .env.template .env`, edit, then `uvicorn app.main:app`. `.env` is
+gitignored (and excluded from the sync and the image); only `.env.template` is
+committed.
+
+In a workload they live under the container's `environmentVars` in
+`.datarobot.yaml`. `dr workload config --sync-env` writes them from `.env`:
+plain values as literals, secrets stored as DataRobot credentials and
+referenced as `dr-credential:<id>/<key>`, so the secret never lands in git.
+
+```yaml
+environmentVars:
+  - {name: APP_GREETING, value: Hello from DataRobot}
+  - {name: MAX_ECHO_TIMES, value: "10"}
+  - {name: SERVICE_API_KEY, value: "dr-credential:<credential-id>/apiToken"}
+```
+
 ## Deploy
 
 ```bash

@@ -17,14 +17,23 @@ import logging
 import os
 import socket
 
-from fastapi import FastAPI
+from dotenv import load_dotenv
+from fastapi import FastAPI, Header, HTTPException
 from pydantic import BaseModel
+
+# Local runs read .env; in a workload there is no .env and real env vars win.
+load_dotenv()
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("fastapi-sample")
 
 WORKLOAD_ID = os.getenv("WORKLOAD_ID")
 ROOT_PATH = f"/api/v2/endpoints/workloads/{WORKLOAD_ID}" if WORKLOAD_ID else ""
+
+# Runtime parameters. SERVICE_API_KEY is a secret: never log or return it.
+APP_GREETING = os.getenv("APP_GREETING", "Hello")
+MAX_ECHO_TIMES = int(os.getenv("MAX_ECHO_TIMES", "10"))
+SERVICE_API_KEY = os.getenv("SERVICE_API_KEY")
 
 logger.info("Starting with WORKLOAD_ID=%s ROOT_PATH=%r", WORKLOAD_ID, ROOT_PATH)
 
@@ -60,13 +69,24 @@ def index() -> dict:
         "workload_id": WORKLOAD_ID,
         "root_path": ROOT_PATH,
         "hostname": socket.gethostname(),
+        "greeting": APP_GREETING,
     }
 
 
 @app.post("/echo", response_model=EchoResponse)
 def echo(payload: EchoRequest) -> EchoResponse:
     """Trivial POST endpoint demonstrating request validation."""
+    if payload.times > MAX_ECHO_TIMES:
+        raise HTTPException(422, f"times must be <= {MAX_ECHO_TIMES}")
     return EchoResponse(
         echoed=[payload.message] * payload.times,
         hostname=socket.gethostname(),
     )
+
+
+@app.get("/secure")
+def secure(x_service_key: str | None = Header(default=None)) -> dict:
+    """Demonstrates consuming a secret runtime parameter."""
+    if not SERVICE_API_KEY or x_service_key != SERVICE_API_KEY:
+        raise HTTPException(401, "invalid or missing X-Service-Key")
+    return {"message": "secret accepted"}

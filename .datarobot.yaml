@@ -17,6 +17,13 @@ artifact:
             readinessProbe:
               path: /healthz
               port: 8080
+            environmentVars:
+              - name: APP_GREETING
+                value: Hello from DataRobot
+              - name: MAX_ECHO_TIMES
+                value: "10"
+              - name: SERVICE_API_KEY
+                value: dr-credential:6ac3a99499e62d3f9bca85a0/apiToken
 runtime:
   containerGroups:
     - name: default # matches the artifact group
